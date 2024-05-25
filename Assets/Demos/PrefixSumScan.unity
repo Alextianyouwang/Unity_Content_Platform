@@ -392,6 +392,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   TestObjectHolder: {fileID: 1717193770}
+  _visualManager: {fileID: 1290279522}
 --- !u!1 &1290279520
 GameObject:
   m_ObjectHideFlags: 0
@@ -437,7 +438,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Element: {fileID: 438438445166537888, guid: 35916511563f4ea4aad0984e93dce164, type: 3}
-  InitialArray: 0000000000000000000000000000000000000000
+  InitialArray: 00000000010000000000000001000000000000000000000001000000000000000100000000000000000000000000000000000000000000000000000000000000
 --- !u!1 &1717193769
 GameObject:
   m_ObjectHideFlags: 0

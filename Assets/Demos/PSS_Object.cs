@@ -6,6 +6,7 @@ public class PSS_Object : MonoBehaviour
     private MaterialPropertyBlock _mpb;
 
     private bool _inView;
+    public bool InView { get { return _inView; } }
     private void OnEnable()
     {
         

@@ -19,12 +19,10 @@ public class PSS_VisualManager : MonoBehaviour
 
     private void OnEnable()
     {
-        SetInitialArray(InitialArray);
 
-        AddNewList(0, true);
-        CalculatPSSAnimation();
 
     }
+    
     public int CeilToNearestPowerOf2(int value)
     {
         int target = 2;
@@ -38,14 +36,20 @@ public class PSS_VisualManager : MonoBehaviour
         Array.Copy(value, newArry, value.Length);
         InitialArray = newArry;
     }
-    public void Sort() 
+    public void StartAnimation() 
     {
-           
+        SetInitialArray(InitialArray);
+        AddNewList(0, true);
+        CalculatPSSAnimation();
     }
-    private void Update()
+    public void StartAnimation(int[] arrayValue)
     {
-      
+        SetInitialArray(arrayValue);
+        AddNewList(0, true);
+        CalculatPSSAnimation();
     }
+
+
     private void OnDisable()
     {
         _allPSS.ForEach(e => e.Dispose());
@@ -90,8 +94,9 @@ public class PSS_VisualManager : MonoBehaviour
                 {
                     int ai = offset * (2 * k + 1) - 1;
                     int bi = offset * (2 * k + 2) - 1;
-                    current.Objects[ai].DuplicateMoveTo(next.Objects[bi], true, next.Objects[ai].UpdateNumberText);
-                    current.Objects[bi].DuplicateMoveTo(next.Objects[bi], true, next.Objects[bi].UpdateNumberText);
+                    current.Objects[ai].DuplicateMoveTo(next.Objects[bi], true, Color.blue,current.Objects[ai].Number, next.Objects[ai].UpdateNumberText, next.Objects[ai].SetColor, Color.cyan);
+                    current.Objects[bi].DuplicateMoveTo(next.Objects[bi], true, Color.blue, current.Objects[bi].Number, next.Objects[bi].UpdateNumberText, next.Objects[bi].SetColor, Color.cyan);
+
                     next.Objects[bi].Number = current.Objects[ai].Number + current.Objects[bi].Number;
                 }
   
@@ -105,10 +110,20 @@ public class PSS_VisualManager : MonoBehaviour
 
         for (int i = 0; i < InitialArray.Length; i++)
         {
-            _allPSS[step].Objects[i].DuplicateMoveTo(_allPSS[step + 1].Objects[i], true, _allPSS[step + 1].Objects[i].UpdateNumberText);
-            _allPSS[step + 1].Objects[i].Number = _allPSS[step].Objects[i].Number;
+            if (i == InitialArray.Length - 1)
+            {
+                _allPSS[step + 1].Objects[i].Number = 0;
+                _allPSS[step + 1].Objects[i].SetColor(Color.red);
+                _allPSS[step].Objects[i].DuplicateMoveTo(_allPSS[step + 1].Objects[i], true, Color.red, _allPSS[step].Objects[i].Number, _allPSS[step + 1].Objects[i].UpdateNumberText, _allPSS[step + 1].Objects[i].SetColor, Color.red);
+            }
+            else 
+            {
+                _allPSS[step + 1].Objects[i].Number = _allPSS[step].Objects[i].Number;
+                _allPSS[step].Objects[i].DuplicateMoveTo(_allPSS[step + 1].Objects[i], true,Color.gray, _allPSS[step].Objects[i].Number, _allPSS[step + 1].Objects[i].UpdateNumberText,null,Color.clear);
+            }
+            
         }
-        _allPSS[step + 1].Objects[InitialArray.Length - 1].Number = 0;
+        
         _allPSS[step + 1].ToggleListVisibility(true);
         step += 1;
 
@@ -131,8 +146,10 @@ public class PSS_VisualManager : MonoBehaviour
                 {
                     int ai = offset * (2 * k + 1) - 1;
                     int bi = offset * (2 * k + 2) - 1;
-                    current.Objects[ai].DuplicateMoveTo(next.Objects[bi], true, next.Objects[bi].UpdateNumberText);
-                    current.Objects[bi].DuplicateMoveTo(next.Objects[ai], true, next.Objects[ai].UpdateNumberText);
+                    current.Objects[ai].DuplicateMoveTo(next.Objects[bi], true, Color.blue, current.Objects[ai].Number, next.Objects[bi].UpdateNumberText, next.Objects[bi].SetColor, Color.cyan);
+                    current.Objects[bi].DuplicateMoveTo(next.Objects[ai], true, Color.yellow, current.Objects[bi].Number, next.Objects[ai].UpdateNumberText, next.Objects[ai].SetColor, Color.yellow);
+                    current.Objects[bi].DuplicateMoveTo(next.Objects[bi], true, Color.blue, current.Objects[bi].Number,null,null,Color.clear);
+
                     int t = current.Objects[bi].Number;
                     next.Objects[bi].Number = current.Objects[ai].Number + current.Objects[bi].Number;
                     next.Objects[ai].Number = t;
@@ -239,23 +256,26 @@ public class PSS_VoteCandidate
         ToDo?.Invoke();
     }
 
-    public async void DuplicateMoveTo(PSS_VoteCandidate targetObject, bool deleteDupWhenFinish, Action ToDo)
+    public async void DuplicateMoveTo(PSS_VoteCandidate targetObject, bool deleteDupWhenFinish, Color dupColor, int dupNum,  Action ToDo, Action<Color> ToSetColor, Color colorToSet)
     {
         float percent = 0;
-        GameObject newObj = GameObject.Instantiate(Element);
-        newObj.transform.position = newObj.transform.position;
-        Vector3 initialPos = newObj.transform.position;
-        OccupiedByAction = true;
+        PSS_VoteCandidate newObj = new PSS_VoteCandidate(_elementInstance, Element.transform.position);
+        Vector3 initialPos = newObj.Element.transform.position;
+        newObj.Element.transform.localScale *= 0.8f;
+       OccupiedByAction = true;
+        newObj.SetColor(dupColor);
+        newObj.SetNumber(dupNum);
         while (percent < 1f)
         {
             percent += Time.deltaTime;
-            newObj.transform.position = Vector3.Lerp(initialPos, targetObject.Element.transform.position, percent);
+            newObj.Element.transform.position = Vector3.Lerp(initialPos, targetObject.Element.transform.position, percent);
             await Task.Yield();
         }
         OccupiedByAction = false;
 
         if (deleteDupWhenFinish)
-            GameObject.DestroyImmediate(newObj);
+            GameObject.DestroyImmediate(newObj.Element);
         ToDo?.Invoke();
+        ToSetColor?.Invoke(colorToSet);
     }
 }
