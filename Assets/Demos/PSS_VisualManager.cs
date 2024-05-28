@@ -76,6 +76,8 @@ public class PSS_VisualManager : MonoBehaviour
         {
             _allLRs[i].SetPosition(1, _allPSS[0].GetPositions()[i]);
             _allLRs[i].SetPosition(0, _allPSS[0].GetPositions()[i]);
+            _allLRsBot[i].SetPosition(0, _allPSS[0].GetPositions()[i]);
+            _allLRsBot[i].SetPosition(1, _allPSS[0].GetPositions()[i]);
         }
     }
     public void StartAnimation() 
@@ -118,7 +120,7 @@ public class PSS_VisualManager : MonoBehaviour
 
     public void AddNewList(float yOffset, bool setVisible) 
     {
-        PSS_Array initialArray = new PSS_Array(Element, InitialArray, yOffset, _allLRs,_allLRsBot) ;
+        PSS_Array initialArray = new PSS_Array(Element, InitialArray, yOffset, _allLRs,_allLRsBot,transform) ;
         initialArray.InitializeList();
         initialArray.ToggleListVisibility(setVisible);
         _allPSS.Add(initialArray);
@@ -148,8 +150,8 @@ public class PSS_VisualManager : MonoBehaviour
                 {
                     int ai = offset * (2 * k + 1) - 1;
                     int bi = offset * (2 * k + 2) - 1;
-                    current.Objects[ai].DuplicateMoveTo(next.Objects[bi], true, Color.blue,current.Objects[ai].Number, next.Objects[ai].UpdateNumberText, next.Objects[ai].SetColor, Color.cyan, true,false, false,1f);
-                    current.Objects[bi].DuplicateMoveTo(next.Objects[bi], true, Color.blue, current.Objects[bi].Number, next.Objects[bi].UpdateNumberText, next.Objects[bi].SetColor, Color.cyan, true, false, false, 1f);
+                    current.Objects[ai].DuplicateMoveTo(next.Objects[bi], true, Color.blue,current.Objects[ai].Number, next.Objects[ai].UpdateNumberText, next.Objects[ai].SetColor, Color.cyan, true,false, true,1f);
+                    current.Objects[bi].DuplicateMoveTo(next.Objects[bi], true, Color.blue, current.Objects[bi].Number, next.Objects[bi].UpdateNumberText, next.Objects[bi].SetColor, Color.cyan, true, false, true, 1f);
 
                     next.Objects[bi].Number = current.Objects[ai].Number + current.Objects[bi].Number;
                 }
@@ -228,16 +230,18 @@ public class PSS_Array
     private GameObject _element;
     private LineRenderer[] _lrs;
     private LineRenderer[] _botLrs;
+    private Transform _parent;
 
 
     private float _yOffset;
-    public PSS_Array(GameObject element, int[] value, float yOffset , LineRenderer[] lr, LineRenderer[] botLrs)
+    public PSS_Array(GameObject element, int[] value, float yOffset , LineRenderer[] lr, LineRenderer[] botLrs, Transform parent)
     {
         _element = element;
         _value = value;
         _yOffset = yOffset;
         _lrs = lr;
         _botLrs = botLrs;
+        _parent = parent;
     }
 
     public void InitializeList()
@@ -245,14 +249,19 @@ public class PSS_Array
         if (_spawnBufferObjects != null)
             return;
         _spawnBufferObjects = new PSS_VoteCandidate[_value.Length];
+        Matrix4x4 localToWorld = _parent.localToWorldMatrix;
         for (int i = 0; i < _value.Length; i++)
         {
-           
-            _spawnBufferObjects[i] = new PSS_VoteCandidate(_element, Vector3.right * i + Vector3.down * _yOffset, _lrs[i], _botLrs[i],i);
+            Vector3 pos =  Vector3.right * i + Vector3.down * _yOffset;
+            pos = localToWorld * new Vector4(pos.x, pos.y, pos.z, 1);
+            Vector3 scale = _parent.localScale;
+            Vector3 euler = _parent.localEulerAngles;
+            _spawnBufferObjects[i] = new PSS_VoteCandidate(_element,pos,euler, scale, _lrs[i], _botLrs[i],i);
             _spawnBufferObjects[i].SetNumber(_value[i]);
         }
 
     }
+
     public void Dispose()
     {
         if (_spawnBufferObjects == null)
@@ -280,11 +289,13 @@ public class PSS_VoteCandidate
     public Action<Vector3> OnMove;
     private int _index;
 
-    public PSS_VoteCandidate( GameObject elementInstance, Vector3 worldPos, LineRenderer lr, LineRenderer botLr, int index)
+    public PSS_VoteCandidate( GameObject elementInstance, Vector3 worldPos, Vector3 worldEuler, Vector3 worldScale, LineRenderer lr, LineRenderer botLr, int index)
     {
         _elementInstance = elementInstance;
         Element = GameObject.Instantiate(_elementInstance);
         Element.transform.position = worldPos;
+        Element.transform.eulerAngles = worldEuler;
+        Element.transform.localScale = worldScale;
         _text = Element.GetComponentInChildren<TextMeshProUGUI>();
         _mpb = new MaterialPropertyBlock();
         _lr = lr;
@@ -333,7 +344,7 @@ public class PSS_VoteCandidate
     public async void DuplicateMoveTo(PSS_VoteCandidate targetObject, bool deleteDupWhenFinish, Color dupColor, int dupNum,  Action ToDo, Action<Color> ToSetColor, Color colorToSet ,bool useLR, bool useLRBot , bool resetLRBotPos, float speed)
     {
         float percent = 0;
-        PSS_VoteCandidate newObj = new PSS_VoteCandidate(_elementInstance, Element.transform.position,_lr,_botLr,_index);
+        PSS_VoteCandidate newObj = new PSS_VoteCandidate(_elementInstance, Element.transform.position, Element.transform.eulerAngles, Element.transform.localScale,_lr,_botLr,_index);
         Vector3 initialPos = newObj.Element.transform.position;
         newObj.Element.transform.localScale *= 0.8f;
        OccupiedByAction = true;
