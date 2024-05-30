@@ -6,6 +6,7 @@ public class PSS_Object : MonoBehaviour
     private MaterialPropertyBlock _mpb;
 
     private bool _inView;
+    public Color ObjColor { private set; get; }
     public bool InView { get { return _inView; } }
     private void OnEnable()
     {
@@ -31,6 +32,7 @@ public class PSS_Object : MonoBehaviour
         _mpb = new MaterialPropertyBlock();
         _mpb.SetColor("_BaseColor", _color);
         GetComponent<MeshRenderer>().SetPropertyBlock(_mpb);
+        ObjColor = _color;
     }
 
     public void SetNumber(int _number) 

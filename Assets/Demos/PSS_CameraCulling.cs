@@ -10,6 +10,7 @@ public class PSS_CameraCulling : MonoBehaviour
     private bool _actionOccupied;
     public PSS_VisualManager _visualManager;
     private int[] _objectArray;
+    private Color[] _colorArray;
     private void OnEnable()
     {
         _cam = GetComponent<Camera>();
@@ -50,13 +51,15 @@ public class PSS_CameraCulling : MonoBehaviour
             yield return null;  
         }
         _objectArray = new int[TestObjectHolder.childCount];
+        _colorArray = new Color[TestObjectHolder.childCount];
         for (int i = 0; i < TestObjectHolder.childCount; i++) 
         {
             _objectArray[i] = TestObjectHolder.GetChild(i).GetComponent<PSS_Object>().InView ? 1 : 0;
+            _colorArray[i] = TestObjectHolder.GetChild(i).GetComponent<PSS_Object>().ObjColor;
             TestObjectHolder.GetChild(i).gameObject.SetActive(false);
 
         }
-        _visualManager.StartAnimation(_objectArray);
+        _visualManager.StartAnimation(_objectArray,_colorArray);
     }
 
     private bool AllProgressesFinished(float[] input) 

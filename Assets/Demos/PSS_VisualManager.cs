@@ -16,8 +16,8 @@ public class PSS_VisualManager : MonoBehaviour
 
     private List<PSS_Array> _allPSS = new List<PSS_Array>();
 
-    private LineRenderer[] _allLRs;
-    private LineRenderer[] _allLRsBot;
+    public static LineRenderer[] _allLRs;
+    public static LineRenderer[] _allLRsBot;
     public static bool[] _BotLRStatus;
 
     public Material LineMaterial;
@@ -44,6 +44,17 @@ public class PSS_VisualManager : MonoBehaviour
      
     }
 
+    public Color[] SetColorArray(Color[] value)
+    {
+        Color[] newArry = new Color[CeilToNearestPowerOf2(value.Length)];
+        Array.Copy(value, newArry, value.Length);
+        return newArry;
+
+
+    }
+
+    
+
     public void InitialLR() 
     {
         _allLRs = new LineRenderer[InitialArray.Length];
@@ -69,6 +80,11 @@ public class PSS_VisualManager : MonoBehaviour
             _BotLRStatus[i] = true;
         }
     }
+    public void ToggleLRs(bool value) 
+    {
+        _allLRs.ToList().ForEach(x => x.gameObject.SetActive(value));
+        _allLRsBot.ToList().ForEach(x => x.gameObject.SetActive(value));
+    }
 
     public void SetLRPositions() 
     {
@@ -93,12 +109,14 @@ public class PSS_VisualManager : MonoBehaviour
         SetLRPositions();
         CalculatPSSAnimation();
     }
-    public void StartAnimation(int[] arrayValue)
+    public void StartAnimation(int[] arrayValue, Color[] colorValue)
     {
+        
         SetInitialArray(arrayValue);
         InitialLR();
 
         AddNewList(0, true);
+        _allPSS[0].SetColors(SetColorArray(colorValue));
         for (int i = 0; i < (int)Mathf.Log(InitialArray.Length, 2) * 2 + 1; i++)
         {
             AddNewList((i + 1) * 2, false);
@@ -120,7 +138,7 @@ public class PSS_VisualManager : MonoBehaviour
 
     public void AddNewList(float yOffset, bool setVisible) 
     {
-        PSS_Array initialArray = new PSS_Array(Element, InitialArray, yOffset, _allLRs,_allLRsBot,transform) ;
+        PSS_Array initialArray = new PSS_Array(Element, InitialArray, yOffset,transform) ;
         initialArray.InitializeList();
         initialArray.ToggleListVisibility(setVisible);
         _allPSS.Add(initialArray);
@@ -150,7 +168,7 @@ public class PSS_VisualManager : MonoBehaviour
                 {
                     int ai = offset * (2 * k + 1) - 1;
                     int bi = offset * (2 * k + 2) - 1;
-                    current.Objects[ai].DuplicateMoveTo(next.Objects[bi], true, Color.blue,current.Objects[ai].Number, next.Objects[ai].UpdateNumberText, next.Objects[ai].SetColor, Color.cyan, true,false, true,1f);
+                    current.Objects[ai].DuplicateMoveTo(next.Objects[bi], true, Color.blue,current.Objects[ai].Number, next.Objects[ai].UpdateNumberText, next.Objects[bi].SetColor, Color.cyan, true,false, true,1f);
                     current.Objects[bi].DuplicateMoveTo(next.Objects[bi], true, Color.blue, current.Objects[bi].Number, next.Objects[bi].UpdateNumberText, next.Objects[bi].SetColor, Color.cyan, true, false, true, 1f);
 
                     next.Objects[bi].Number = current.Objects[ai].Number + current.Objects[bi].Number;
@@ -217,10 +235,69 @@ public class PSS_VisualManager : MonoBehaviour
             step += 1;
 
         }
+        await Task.Delay(1200);
+        ToggleLRs(false);
+        await Task.Delay(1200);
+        CompareAnimation();
+        await Task.Delay(1500);
+        VisibleObjectCheck();
+        await Task.Delay(1500);
+        RemoveEmptySpace();
     }
 
+    void CompareAnimation()
+    {
+        PSS_Array last = _allPSS[(int)Mathf.Log(InitialArray.Length, 2) * 2 + 1];
+        PSS_Array first = _allPSS[0];
+        PSS_Array second = _allPSS[1];
+        foreach (PSS_Array current in _allPSS) 
+        {
+            if (current != last && current != first)
+                current.ToggleListVisibility(false);
+            else if (current == last)
+            { 
+                foreach(PSS_VoteCandidate p in current.Objects) 
+                {
+                    p.MoveTo(second.Objects[p.Index], false, null);
+                }
+            }
+        }
+    }
 
+    void VisibleObjectCheck() 
+    {
+        PSS_Array last = _allPSS[(int)Mathf.Log(InitialArray.Length, 2) * 2 + 1];
+        PSS_Array first = _allPSS[0];
+        PSS_Array third = _allPSS[2];
+
+        int i = 0;
+        foreach (PSS_VoteCandidate p in first.Objects)
+        {
+
+            p.ToggleVisibility(p.Number == 1);
+            last.Objects[i].MoveTo(third.Objects[p.Index], p.Number != 1, null);
+            i++;
+        }
+    }
+
+    void RemoveEmptySpace() 
+    {
+        PSS_Array last = _allPSS[(int)Mathf.Log(InitialArray.Length, 2) * 2 + 1];
+        PSS_Array first = _allPSS[0];
+
+        int index = 0;
+        for (int i = 0; i < first.Objects.Length; i++) 
+        {
+            if (first.Objects[i].Number == 1) 
+            {
+                first.Objects[i].MoveTo(first.Objects[index], false, null);
+                last.Objects[i].MoveTo(last.Objects[index], false, null);
+                index++;
+            }
+        }
+    }
 }
+
 
 public class PSS_Array
 {
@@ -228,19 +305,15 @@ public class PSS_Array
     private PSS_VoteCandidate[] _spawnBufferObjects;
     public PSS_VoteCandidate[] Objects { get { return _spawnBufferObjects; } }
     private GameObject _element;
-    private LineRenderer[] _lrs;
-    private LineRenderer[] _botLrs;
     private Transform _parent;
 
 
     private float _yOffset;
-    public PSS_Array(GameObject element, int[] value, float yOffset , LineRenderer[] lr, LineRenderer[] botLrs, Transform parent)
+    public PSS_Array(GameObject element, int[] value, float yOffset , Transform parent)
     {
         _element = element;
         _value = value;
         _yOffset = yOffset;
-        _lrs = lr;
-        _botLrs = botLrs;
         _parent = parent;
     }
 
@@ -256,7 +329,7 @@ public class PSS_Array
             pos = localToWorld * new Vector4(pos.x, pos.y, pos.z, 1);
             Vector3 scale = _parent.localScale;
             Vector3 euler = _parent.localEulerAngles;
-            _spawnBufferObjects[i] = new PSS_VoteCandidate(_element,pos,euler, scale, _lrs[i], _botLrs[i],i);
+            _spawnBufferObjects[i] = new PSS_VoteCandidate(_element, pos, euler, scale, i);
             _spawnBufferObjects[i].SetNumber(_value[i]);
         }
 
@@ -272,6 +345,16 @@ public class PSS_Array
 
     }
 
+    public void SetColors(Color[] colors) 
+    {
+        int i = 0;
+        foreach (PSS_VoteCandidate p in _spawnBufferObjects) 
+        {
+            p.SetColor(colors[i]);
+            i++;
+        }
+    }
+
     public void ToggleListVisibility(bool value) => _spawnBufferObjects.ToList().ForEach(p => p.ToggleVisibility(value));
     public Vector3[] GetPositions() => _spawnBufferObjects.ToList().Select(x => x.Element.transform.position).ToArray();
 
@@ -284,22 +367,21 @@ public class PSS_VoteCandidate
     public int Number;
     public bool OccupiedByAction;
     private MaterialPropertyBlock _mpb;
-    private LineRenderer _lr;
-    private LineRenderer _botLr;
     public Action<Vector3> OnMove;
+    private Vector3 _initialPos;
     private int _index;
+    public int Index { get { return _index; } }
 
-    public PSS_VoteCandidate( GameObject elementInstance, Vector3 worldPos, Vector3 worldEuler, Vector3 worldScale, LineRenderer lr, LineRenderer botLr, int index)
+    public PSS_VoteCandidate( GameObject elementInstance, Vector3 worldPos, Vector3 worldEuler, Vector3 worldScale, int index)
     {
         _elementInstance = elementInstance;
         Element = GameObject.Instantiate(_elementInstance);
         Element.transform.position = worldPos;
         Element.transform.eulerAngles = worldEuler;
         Element.transform.localScale = worldScale;
+        _initialPos = worldPos;
         _text = Element.GetComponentInChildren<TextMeshProUGUI>();
         _mpb = new MaterialPropertyBlock();
-        _lr = lr;
-        _botLr = botLr;
         _index = index;
     }
 
@@ -319,19 +401,17 @@ public class PSS_VoteCandidate
     {
         Element.SetActive(value);
     }
-    public void UpdateLRStartPos(Vector3 pos)
-    {
-        _lr.SetPosition(0,pos);
-    }
+
     public async void MoveTo(PSS_VoteCandidate targetObject, bool turnOff , Action ToDo) 
     {
         float percent = 0;
         Vector3 initialPos = Element.transform.position;
+        Vector3 targetPos = targetObject.Element.transform.position;
         OccupiedByAction = true;
         while (percent < 1f)
         {
             percent += Time.deltaTime;
-            Element.transform.position = Vector3.Lerp(initialPos,targetObject.Element.transform.position, percent);
+            Element.transform.position = Vector3.Lerp(initialPos,targetPos, percent);
             await Task.Yield();
         }
         OccupiedByAction = false;
@@ -344,7 +424,7 @@ public class PSS_VoteCandidate
     public async void DuplicateMoveTo(PSS_VoteCandidate targetObject, bool deleteDupWhenFinish, Color dupColor, int dupNum,  Action ToDo, Action<Color> ToSetColor, Color colorToSet ,bool useLR, bool useLRBot , bool resetLRBotPos, float speed)
     {
         float percent = 0;
-        PSS_VoteCandidate newObj = new PSS_VoteCandidate(_elementInstance, Element.transform.position, Element.transform.eulerAngles, Element.transform.localScale,_lr,_botLr,_index);
+        PSS_VoteCandidate newObj = new PSS_VoteCandidate(_elementInstance, Element.transform.position, Element.transform.eulerAngles, Element.transform.localScale,_index);
         Vector3 initialPos = newObj.Element.transform.position;
         newObj.Element.transform.localScale *= 0.8f;
        OccupiedByAction = true;
@@ -359,19 +439,19 @@ public class PSS_VoteCandidate
             OnMove?.Invoke(newObj.Element.transform.position);
             if (useLR) 
             {
-                _lr.positionCount++;
-                _lr.SetPosition(_lr.positionCount - 1, newObj.Element.transform.position);
+                PSS_VisualManager._allLRs[_index].positionCount++;
+                PSS_VisualManager._allLRs[_index].SetPosition(PSS_VisualManager._allLRs[_index].positionCount - 1, newObj.Element.transform.position);
             }
             if (useLRBot) 
             {
                 if (resetLRBotPos && PSS_VisualManager._BotLRStatus[_index] ) 
                 {
                     PSS_VisualManager._BotLRStatus[_index] = false;
-                    _botLr.SetPosition(1, initialPos);
-                    _botLr.SetPosition(0, initialPos);
+                    PSS_VisualManager._allLRsBot[_index].SetPosition(1, initialPos);
+                    PSS_VisualManager._allLRsBot[_index].SetPosition(0, initialPos);
                 }
-                _botLr.positionCount++;
-                _botLr.SetPosition(_botLr.positionCount - 1, newObj.Element.transform.position);
+                PSS_VisualManager._allLRsBot[_index].positionCount++;
+                PSS_VisualManager._allLRsBot[_index].SetPosition(PSS_VisualManager._allLRsBot[_index].positionCount - 1, newObj.Element.transform.position);
             }
 
           await Task.Yield();
@@ -383,4 +463,5 @@ public class PSS_VoteCandidate
         ToDo?.Invoke();
         ToSetColor?.Invoke(colorToSet);
     }
+
 }
