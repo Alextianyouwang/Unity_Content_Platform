@@ -8,9 +8,11 @@ public class PSS_Object : MonoBehaviour
     private bool _inView;
     public Color ObjColor { private set; get; }
     public bool InView { get { return _inView; } }
-    private void OnEnable()
+
+    public Vector3 InitialPosition { private set; get; }
+    private void Start()
     {
-        
+        InitialPosition = transform.position;
     }
     public void SetState(bool value) 
     {
