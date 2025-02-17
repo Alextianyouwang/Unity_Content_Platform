@@ -23,8 +23,8 @@ public class PSS_VisualManager : MonoBehaviour
     public Material LineMaterial;
     public static Action<int[]> OnFinishSorting;
 
-    private float _pss_topDelay = 0.1f;
-    private float _pss_botDelay = 0.1f;
+    private float _pss_topDelay = 0.5f;
+    private float _pss_botDelay = 0.5f;
 
     private void OnEnable()
     {
@@ -239,15 +239,15 @@ public class PSS_VisualManager : MonoBehaviour
             step += 1;
 
         }
-        await Task.Delay(1200);
+        await Task.Delay(4000);
         ToggleLRs(false);
-        await Task.Delay(1200);
+        await Task.Delay(4000);
         CompareAnimation();
-        await Task.Delay(1500);
+        await Task.Delay(4000);
         VisibleObjectCheck();
-        await Task.Delay(1500);
+        await Task.Delay(4000);
         RemoveEmptySpace();
-        await Task.Delay(1500);
+        await Task.Delay(4000);
         FinishSortingAndCleanup();
         OnFinishSorting?.Invoke(_allPSS[0].Objects.Select((x,i) => new { x, i}). Where(item => item. x.Number == 1).Select(item => item.i).ToArray());
     }
